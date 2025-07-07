@@ -1,24 +1,26 @@
-name: Generate Snake
+name: generate-snake
 
 on:
-  schedule:
-    - cron: "0 0 * * *"  # todo dia à meia-noite
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
-  generate:
+  build:
     runs-on: ubuntu-latest
+
     steps:
+      - uses: actions/checkout@v4
+
       - uses: Platane/snk@v3
         with:
           github_user_name: leobravoe
           outputs: |
             dist/github-snake.svg
             dist/github-snake-dark.svg?palette=github-dark
-      - name: Push to the output branch
+
+      - name: Commit & Push
         uses: EndBug/add-and-commit@v9
         with:
-          author_name: github-actions
-          author_email: github-actions@github.com
-          message: "Generate snake animation"
-          add: 'dist/*.svg'
+          message: "chore: generate snake"
+          add: "dist/*"
