@@ -3,24 +3,58 @@ name: generate-snake
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 * * *"   # diário, 00:00 UTC
+
+permissions:
+  contents: write          # necessário para dar push com GITHUB_TOKEN
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout (com histórico)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # permite criar/atualizar branch "output"
 
-      - uses: Platane/snk@v3
+      - name: Gerar SVGs com Platane/snk
+        uses: Platane/snk@v3
         with:
           github_user_name: leobravoe
           outputs: |
             dist/github-snake.svg
             dist/github-snake-dark.svg?palette=github-dark
 
-      - name: Commit & Push
-        uses: EndBug/add-and-commit@v9
-        with:
-          message: "chore: generate snake"
-          add: "dist/*"
+      # Salvamos artefatos em /tmp antes de trocar pro branch 'output'
+      - name: Guardar artefatos temporariamente
+        run: |
+          rm -rf /tmp/snake-dist
+          mkdir -p /tmp/snake-dist
+          cp -R dist/* /tmp/snake-dist/
+
+      - name: Commit & Push no branch 'output' como github-actions[bot]
+        env:
+          TZ: America/Sao_Paulo
+        run: |
+          # Identidade do bot oficial (não conta no seu grid)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Criar/atualizar o branch output
+          git fetch origin output || true
+          git checkout -B output
+
+          # Garantir pasta e copiar os arquivos gerados
+          mkdir -p dist
+          cp -R /tmp/snake-dist/* dist/ || true
+
+          # Comitar somente se houver alterações
+          git add dist
+          if git diff --cached --quiet; then
+            echo "Sem mudanças para publicar."
+            exit 0
+          fi
+
+          git commit -m "chore: update snake artifacts [skip ci]"
+          git push -u origin output
