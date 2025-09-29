@@ -3,22 +3,25 @@ name: generate-snake
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"   # diário, 00:00 UTC
+    - cron: "0 0 * * *"
+
+concurrency:
+  group: snake-${{ github.ref }}   # evita duas execuções pisarem uma na outra
+  cancel-in-progress: true
 
 permissions:
-  contents: write          # necessário para dar push com GITHUB_TOKEN
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout (com histórico)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # permite criar/atualizar branch "output"
+          fetch-depth: 0
 
-      - name: Gerar SVGs com Platane/snk
+      - name: Gerar SVGs
         uses: Platane/snk@v3
         with:
           github_user_name: leobravoe
@@ -26,30 +29,33 @@ jobs:
             dist/github-snake.svg
             dist/github-snake-dark.svg?palette=github-dark
 
-      # Salvamos artefatos em /tmp antes de trocar pro branch 'output'
-      - name: Guardar artefatos temporariamente
+      - name: Preparar arquivos
         run: |
           rm -rf /tmp/snake-dist
           mkdir -p /tmp/snake-dist
           cp -R dist/* /tmp/snake-dist/
 
-      - name: Commit & Push no branch 'output' como github-actions[bot]
+      - name: Commit & Push no branch 'output' (como github-actions[bot])
         env:
           TZ: America/Sao_Paulo
         run: |
-          # Identidade do bot oficial (não conta no seu grid)
+          # Identidade do bot
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Criar/atualizar o branch output
+          # Sincronizar com o remoto e posicionar no branch remoto
           git fetch origin output || true
-          git checkout -B output
+          if git rev-parse --verify origin/output >/dev/null 2>&1; then
+            git checkout -B output origin/output
+          else
+            git checkout -B output
+          fi
 
-          # Garantir pasta e copiar os arquivos gerados
+          # Copiar artefatos
           mkdir -p dist
           cp -R /tmp/snake-dist/* dist/ || true
 
-          # Comitar somente se houver alterações
+          # Comitar apenas se houver mudanças
           git add dist
           if git diff --cached --quiet; then
             echo "Sem mudanças para publicar."
@@ -57,4 +63,11 @@ jobs:
           fi
 
           git commit -m "chore: update snake artifacts [skip ci]"
-          git push -u origin output
+
+          # Tente rebase e push normal; se alguém avançou o branch, use force-with-lease
+          if git pull --rebase origin output; then
+            git push origin output
+          else
+            echo "Conflito ou avanço remoto detectado; forçando com lease..."
+            git push --force-with-lease origin output
+          fi
