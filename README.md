@@ -101,7 +101,7 @@ Consulte a documentação da Action que escolher para ver todas as opções disp
 
 * **SVG/GIF aparece estranho ao abrir direto no GitHub**: às vezes o GitHub tenta renderizar o arquivo em HTML ou altera a forma como o conteúdo é servido. Usar a URL raw (`raw.githubusercontent.com`) normalmente resolve. Também verifique se o arquivo não está corrompido pelo processo de commit. citeturn2search6
 
-* **Workflow falha por permissão**: configure `Permissions` do workflow para permitir gravação no repositório (Read & Write). Em repositórios de perfil, dê atenção especial às permissões do repositório que contém o README. citeturn2search3
+* **Workflow falha por permissão**: configure `Permissions` do workflow para permitir gravação no repositório (Read & Write). Em repositórios de perfil, dê atenção especial às permissões do repositório que contém o README.
 
 ---
 
@@ -111,18 +111,5 @@ Contribuições são bem-vindas!
 
 * Abra uma issue descrevendo a melhoria ou bug.
 * Para mudanças rápidas, envie um PR com um branch claro e teste o workflow.
-
----
-
-## 📜 Licença
-
-Este projeto usa a licença **MIT** (veja o arquivo `LICENSE` neste repositório).
-
----
-
-## Recursos e leituras adicionais
-
-* Ação no Marketplace: `generate-snake-game-from-github-contribution-grid` / `Platane/snk`. citeturn2search0turn2search2
-* Tutoriais e posts explicando o processo e os usos em README de perfil. citeturn2search1turn2search9
 
 ---
