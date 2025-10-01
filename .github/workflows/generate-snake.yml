@@ -6,7 +6,7 @@ on:
     - cron: "0 0 * * *"
 
 concurrency:
-  group: snake-${{ github.ref }}   # evita duas execuções pisarem uma na outra
+  group: snake-${{ github.repository }}
   cancel-in-progress: true
 
 permissions:
@@ -16,12 +16,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (full history)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Gerar SVGs
+      - name: Gerar SVGs com Platane/snk
         uses: Platane/snk@v3
         with:
           github_user_name: leobravoe
@@ -29,45 +29,57 @@ jobs:
             dist/github-snake.svg
             dist/github-snake-dark.svg?palette=github-dark
 
-      - name: Preparar arquivos
+      - name: Guardar artefatos temporariamente
         run: |
           rm -rf /tmp/snake-dist
           mkdir -p /tmp/snake-dist
           cp -R dist/* /tmp/snake-dist/
 
-      - name: Commit & Push no branch 'output' (como github-actions[bot])
+      - name: Publish to output branch using git worktree (as github-actions[bot])
         env:
           TZ: America/Sao_Paulo
         run: |
-          # Identidade do bot
+          set -e
+          # identidade do bot (não conta no seu grid)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Sincronizar com o remoto e posicionar no branch remoto
-          git fetch origin output || true
-          if git rev-parse --verify origin/output >/dev/null 2>&1; then
-            git checkout -B output origin/output
-          else
-            git checkout -B output
+          WORKTREE_DIR="/tmp/repo-output"
+          # remove worktree antigo se existir (limpeza de runs anteriores)
+          if [ -d "$WORKTREE_DIR" ]; then
+            rm -rf "$WORKTREE_DIR"
           fi
 
-          # Copiar artefatos
-          mkdir -p dist
-          cp -R /tmp/snake-dist/* dist/ || true
+          # Se o branch remoto 'output' existe, vamos usá-lo; caso contrário, criamos novo branch
+          if git ls-remote --exit-code --heads origin output >/dev/null 2>&1; then
+            echo "Branch origin/output existe — criando worktree a partir do remoto"
+            git worktree add --checkout "$WORKTREE_DIR" origin/output
+          else
+            echo "Branch origin/output NÃO existe — criando worktree com novo branch 'output'"
+            # usamos -B para criar e posicionar a branch no HEAD atual (ou vazio)
+            git worktree add --checkout -B output "$WORKTREE_DIR"
+          fi
 
-          # Comitar apenas se houver mudanças
+          # Copiar artefatos para a worktree
+          mkdir -p "$WORKTREE_DIR/dist"
+          cp -R /tmp/snake-dist/* "$WORKTREE_DIR/dist/" || true
+
+          # Commitar somente se houver mudanças
+          cd "$WORKTREE_DIR"
           git add dist
           if git diff --cached --quiet; then
             echo "Sem mudanças para publicar."
+            # remover worktree para limpeza (opcional)
+            cd $GITHUB_WORKSPACE
+            git worktree remove --force "$WORKTREE_DIR" || true
             exit 0
           fi
 
           git commit -m "chore: update snake artifacts [skip ci]"
 
-          # Tente rebase e push normal; se alguém avançou o branch, use force-with-lease
-          if git pull --rebase origin output; then
-            git push origin output
-          else
-            echo "Conflito ou avanço remoto detectado; forçando com lease..."
-            git push --force-with-lease origin output
-          fi
+          # Push usando force-with-lease para evitar sobrescrever se outro job avançou a branch
+          git push --force-with-lease origin HEAD:output
+          
+          # remover worktree para limpeza
+          cd $GITHUB_WORKSPACE
+          git worktree remove --force "$WORKTREE_DIR" || true
