@@ -1,9 +1,5 @@
 # GitHub Contribution Grid Snake
 
-Uma ação / template que gera uma animação (SVG/GIF) do tipo **"snake"** a partir do seu gráfico de contribuições do GitHub — ideal para mostrar na README do seu perfil.
-
-> Este README foi escrito para o repositório `leobravoe/github-contribution-grid-snake` como um README completo, com instruções de uso, configuração e exemplos prontos para copiar.
-
 ---
 
 ## 👀 O que é
@@ -130,5 +126,3 @@ Este projeto usa a licença **MIT** (veja o arquivo `LICENSE` neste repositório
 * Tutoriais e posts explicando o processo e os usos em README de perfil. citeturn2search1turn2search9
 
 ---
-
-Se quiser, eu já coloco esse README em formato `README.md` no repositório (criar/abrir PR) — diga apenas qual mensagem de commit prefere e se deseja personalizar o texto (ex.: idioma, exemplos, cores padrão, cron do agendamento).
